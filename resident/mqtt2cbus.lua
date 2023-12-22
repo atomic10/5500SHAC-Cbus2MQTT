@@ -4,10 +4,9 @@
 
 -- Install this script as a resident script with a sleep interval of 5 seconds
 
-mqtt_broker = 'YOUR_MQTT_HOST'
-mqtt_username = 'YOUR_MQTT_USERNAME'
-mqtt_password = 'YOUR_MQTT_PASSWORD'
-mqtt_clientid = 'mqtt2cbus'
+mqtt_broker = 'xxx.xxx.xxx.xxx'
+mqtt_username = 'xxxxxxxxxxxxxx'
+mqtt_password = 'xxxxxxxxxxxxxxxxxxxxxxxxxxx'
 
 mqtt_read_topic = 'cbus/read/'
 mqtt_write_topic = 'cbus/write/#';
@@ -16,24 +15,24 @@ mqtt_write_topic = 'cbus/write/#';
 mqtt = require("mosquitto")
 
 -- create new mqtt client
-client = mqtt.new(mqtt_clientid)
+client = mqtt.new()
 
-log("created MQTT client", client)
+--log("created MQTT client", client)
 
 client.ON_CONNECT = function()
-  log("MQTT connected - receive")
+--  log("MQTT connected - receive")
   local mid = client:subscribe(mqtt_write_topic, 2)
 end
 
 client.ON_MESSAGE = function(mid, topic, payload)
 
-  log(topic, payload)
+ -- log(topic, payload)
   
   parts = string.split(topic, "/")
 
   if not parts[6] then
     
-    log('MQTT error', 'Invalid message format')
+--    log('MQTT error', 'Invalid message format')
     
   elseif parts[6] == "getall" then
     
@@ -46,12 +45,12 @@ client.ON_MESSAGE = function(mid, topic, payload)
       if app == tonumber(parts[4]) and group ~= 0 then
 		    level = tonumber(value.data)
     		state = (level ~= 0) and "ON" or "OFF"
-        log(parts[3], app, group, state, level)
+--        log(parts[3], app, group, state, level)
         client:publish(mqtt_read_topic .. parts[3] .. "/" .. app .. "/" .. group .. "/state", state, 1, true)
     		client:publish(mqtt_read_topic .. parts[3] .. "/" .. app .. "/" .. group .. "/level", level, 1, true)
   		end	
   	end
-    log('Done')
+--    log('Done')
   elseif parts[6] == "switch" then
     
     if payload == "ON" then
@@ -61,15 +60,20 @@ client.ON_MESSAGE = function(mid, topic, payload)
     end
     
   elseif parts[6] == "measurement" then
-
-    SetCBusMeasurement(0, parts[4], parts[5], (payload / 10), 0)
+ --   log(topic, payload)
+    SetCBusMeasurement(0, parts[4], parts[5], (payload), 0)
+  
+  elseif parts[6] == "shedac_temp" then
+--    log("user value")
+--    log(0, parts[6], payload, 0)
+    SetUserParam(0, parts[6], payload)
     
   elseif parts[6] == "ramp" then
 
     if payload == "ON" then
-			SetCBusLevel(0, parts[4], parts[5], 255, 0)
+			SetCBusLevel(0, parts[4], parts[5], 255)
     elseif payload == "OFF" then
-      SetCBusLevel(0, parts[4], parts[5], 0, 0)
+      SetCBusLevel(0, parts[4], parts[5], 0)
     else
       ramp = string.split(payload, ",")
       num = math.floor(ramp[1] + 0.5)
@@ -80,10 +84,8 @@ client.ON_MESSAGE = function(mid, topic, payload)
 	        SetCBusLevel(0, parts[4], parts[5], num, 0)
         end
       end
-    end
-    
+    end    
   end
-  
 end
 
 client:login_set(mqtt_username, mqtt_password)
